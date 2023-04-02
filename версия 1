@@ -1,0 +1,142 @@
+#Создай собственный Шутер!
+from random import *
+from pygame import *
+
+class GameSprite(sprite.Sprite):
+   #конструктор класса
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        super().__init__()
+        # каждый спрайт должен хранить свойство image - изображение
+        self.image = transform.scale(image.load(player_image), (size_x, size_y))
+       
+        # каждый спрайт должен хранить свойство rect - прямоугольник, в который он вписан
+        self.rect = self.image.get_rect()
+
+        self.rect.x = player_x
+        self.rect.y = player_y
+        self.speed = player_speed 
+ 
+    def reset(self):
+        window.blit(self.image, (self.rect.x, self.rect.y))
+
+class Player(GameSprite):
+    
+    def update(self):
+        keys = key.get_pressed()
+
+        if keys[K_LEFT] and self.rect.x > 5:
+            self.rect.x -= self.speed
+        if keys[K_RIGHT] and self.rect.x < win_width - 80:
+            self.rect.x += self.speed
+        if keys[K_UP] and self.rect.y > 5:
+            self.rect.y -= self.speed
+        if keys[K_DOWN] and self.rect.y < win_height - 80:
+            self.rect.y += self.speed
+    def fire(self):
+        bullet = Bullet('bullet.png', self.rect.centerx - 10, self.rect.top, 20, 25, 5)
+        bullets.add(bullet)
+font.init()
+
+font = font.Font('Arial', 35)
+
+
+
+lost = 0
+second = 0 
+
+class Enemy(GameSprite):
+    def update(self):
+        global lost 
+        global second
+        self.rect.y += self.speed
+
+        if self.rect.y >= win_height:
+            self.rect.x = randint(5, 650)
+            self.rect.y = -40
+            self.speed = randint(1, 5)
+            lost = lost + 1
+            print(lost)
+        
+        if bullets == monsters:
+            second = second + 1
+            print(second)
+
+class Bullet(GameSprite):
+    def update(self):
+        self.rect.y -= self.speed
+        if self.rect.y < 0: 
+            self.kill()
+
+monsters = sprite.Group()
+bullets = sprite.Group()
+
+for i in range(1, 6):
+    monster = Enemy('ufo.png', randint(0,650), -40, 50, 50, randint(1,5))
+    monsters.add(monster)
+
+player_x1 = randint(0, 695)
+
+
+ship = Player('rocket.png', 20, 390, 50, 100, 7)
+asteroid = Enemy('asteroid.png', player_x1, 10, 50, 50, 2)
+
+
+win_width = 700
+win_height = 500
+window = display.set_mode((win_width, win_height))
+display.set_caption("Maze")
+background = transform.scale(image.load("galaxy.jpg"), (win_width, win_height))
+
+mixer.init()
+mixer.music.load('space.ogg')
+mixer.music.play()
+
+
+game = True
+finish = False
+clock = time.Clock()
+FPS = 70
+while game:
+    for e in event.get():
+        if e.type == QUIT:
+            game = False
+        elif e.type == KEYDOWN:
+            if e.key == K_SPACE:
+                ship.fire()
+
+    if finish != True:
+        window.blit(background,(0, 0))
+        
+        win = font.render('Пропущенно: ' + str(lost), True, (255, 255, 255))
+        window.blit(win, (0, 0))
+
+        win = font.render('Убито: ' + str(second), True, (255, 255, 255))
+        window.blit(win, (0, 20))
+
+        collide = sprite.groupcollide(monsters, bullets, True, True)
+        for c in collide:
+            second = second + 1
+            monster = Enemy('ufo.png', randint(0,650), -40, 50, 50, randint(1,4))
+            monsters.add(monster)
+            
+        if lost > 5:
+            game = False
+            print('Ты проиграл')
+        
+        if score > 25:
+            game = False
+
+        if sprite.spritecollide(ship, monsters, False):
+            finish = True
+
+        monsters.update()
+        monsters.draw(window)
+
+        ship.reset()
+        ship.update()
+
+        bullets.update()
+        bullets.draw(window)
+        
+        display.update()
+        clock.tick(FPS)
